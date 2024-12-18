@@ -15,25 +15,6 @@ Este projeto é um avaliador de força de senhas baseado em padrões de seguran�
 
 python passmeter.py senhas.txt rockyou.txt
 
-## Resultado Esperado 
-
-Resumo da Análise de Senhas:
-+-------------------------+-------------------------+
-| Descrição               | Valor                   |
-+-------------------------+-------------------------+
-| Total de Senhas         | 5                       |
-| Entropia Média das Senhas| 32.56                   |
-+-------------------------+-------------------------+
-
-Detalhes das Senhas:
-+------------------+----------+----------+---------------------+
-| Senha            | Força    | Entropia | Está no RockYou?     |
-+------------------+----------+----------+---------------------+
-| password123      | Fraca    | 22.13    | Sim                 |
-| 12345678         | Muito Fraca| 15.92  | Sim                 |
-| StrongP@ssw0rd!  | Forte    | 46.85    | Não                 |
-+------------------+----------+----------+---------------------+
-
 ### Requisitos
 
 Antes de rodar o script, instale as dependências do projeto com o seguinte comando:
