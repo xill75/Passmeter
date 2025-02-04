@@ -1,6 +1,6 @@
 import argparse
 import re
-import tabulate
+from tabulate import tabulate
 from collections import Counter
 from colorama import Fore, Style, init
 import math
@@ -171,12 +171,11 @@ def gerar_sumario(analise):
 
     # Exibir tabela de senhas repetidas
     if senhas_repetidas:
-        print(Fore.YELLOW + "\nSenhas Repetidas:")
+        rint(Fore.YELLOW + "\nSenhas Repetidas:")
         tabela_repetidas = [[senha] for senha in senhas_repetidas]
-        print(tabulate(tabela_repetidas, headers=[Fore.YELLOW + "Senha"], tablefmt="grid"))
+        print(tabulate.tabulate(tabela_repetidas, headers=[Fore.YELLOW + "Senha"], tablefmt="grid"))
     else:
         print(Fore.GREEN + "\nNenhuma senha repetida encontrada.")
-
 def main():
     """
     Função principal que lida com os argumentos passados ao script e executa as análises
