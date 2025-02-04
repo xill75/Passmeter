@@ -1,6 +1,6 @@
 import argparse
 import re
-from tabulate import tabulate # type: ignore
+from tabulate import tabulate
 from collections import Counter
 from colorama import Fore, Style, init
 import math
