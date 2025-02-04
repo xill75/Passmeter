@@ -1,8 +1,8 @@
 import argparse
 import re
+import tabulate
 from collections import Counter
 from colorama import Fore, Style, init
-from tabulate import tabulate
 import math
 
 # Inicializar Colorama para exibição colorida no terminal
