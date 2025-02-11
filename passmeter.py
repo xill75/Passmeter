@@ -173,7 +173,7 @@ def gerar_sumario(analise):
     if senhas_repetidas:
         print(Fore.YELLOW + "\nSenhas Repetidas:")
         tabela_repetidas = [[senha] for senha in senhas_repetidas]
-        print(tabulate.tabulate(tabela_repetidas, headers=[Fore.YELLOW + "Senha"], tablefmt="grid"))
+        print(tabulate(tabela_repetidas, headers=[Fore.YELLOW + "Senha"], tablefmt="grid"))
     else:
         print(Fore.GREEN + "\nNenhuma senha repetida encontrada.")
 def main():
