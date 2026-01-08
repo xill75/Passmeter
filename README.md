@@ -16,7 +16,7 @@ Instale as dependências necessárias:
 
 ```bash
 pip install -r requirements.txt
-
+```
 Uso
 Análise Básica
 
@@ -24,21 +24,21 @@ Executa apenas a análise heurística do zxcvbn:
 
 ```bash
 python passmeter.py senhas.txt
-
+```
 Com Wordlist e Exportação CSV
 
 Verifica contra o RockYou e salva o resultado em arquivo:
 ```bash
 
 python passmeter.py senhas.txt --rockyou rockyou.txt --csv relatorio.csv
-
+```
 Exibir Senhas 
 
 Força a exibição das senhas em texto claro no terminal (use com cautela):
 ```bash
 
 python passmeter.py senhas.txt --show
-
+```
 Argumentos
 
     arquivo_senhas: Caminho do arquivo contendo as senhas (uma por linha).
