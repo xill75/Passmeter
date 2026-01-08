@@ -22,12 +22,18 @@ def exibir_banner():
     print(Fore.CYAN + banner)
 
 # Função para calcular a entropia de uma senha
-def analisar_senha_zxcvbn(senha):
-    resultado = zxcvbn(senha)
+def analisar_senha_zxcvbn(senha, user_inputs=[]):
+    resultado = zxcvbn(senha, user_inputs=user_inputs)
+    
+    # Cria uma lista garantindo que 'warning' esteja dentro de colchetes
+    feedback_list = [resultado['feedback']['warning']] + resultado['feedback']['suggestions']
+    
     return {
+        'senha': senha,
         'score': resultado['score'],
         'crack_time': resultado['crack_times_display']['offline_slow_hashing_1e4_per_second'],
-        'feedback': ",".join(resultado['feedback']['warnings'] + resultado['feedback']['suggestions'])
+        # Filtra strings vazias e junta com vírgula
+        'feedback': ", ".join([f for f in feedback_list if f])
     }
 
 # Função para avaliar a força da senha
