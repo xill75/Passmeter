@@ -1,8 +1,10 @@
 import argparse
 import re
+import csv # New 
 from tabulate import tabulate
 from collections import Counter
 from colorama import Fore, Style, init
+from zxcvbn import zxcvbn # New
 import math
 
 # Inicializar Colorama para exibição colorida no terminal
@@ -20,23 +22,13 @@ def exibir_banner():
     print(Fore.CYAN + banner)
 
 # Função para calcular a entropia de uma senha
-def calcular_entropia(senha):
-    """
-    Calcula a entropia da senha para avaliar sua complexidade.
-    A entropia é baseada no comprimento e na diversidade de caracteres da senha.
-    """
-    if len(senha) == 0:
-        return 0
-    pool = 0
-    if re.search(r'[a-z]', senha):
-        pool += 26  # Letras minúsculas
-    if re.search(r'[A-Z]', senha):
-        pool += 26  # Letras maiúsculas
-    if re.search(r'[0-9]', senha):
-        pool += 10  # Dígitos numéricos
-    if re.search(r'[!@#$%^&*()_+\-=[\]{};\\:\"|,.<>\/?]', senha):
-        pool += 32  # Caracteres especiais
-    return len(senha) * math.log2(pool) if pool > 0 else 0
+def analisar_senha_zxcvbn(senha):
+    resultado = zxcvbn(senha)
+    return {
+        'score': resultado['score'],
+        'crack_time': resultado['crack_times_display']['offline_slow_hashing_1e4_per_second'],
+        'feedback': ",".join(resultado['feedback']['warnings'] + resultado['feedback']['suggestions'])
+    }
 
 # Função para avaliar a força da senha
 def avaliar_forca_senha(senha):
@@ -79,11 +71,11 @@ def verificar_rockyou(senha, lista_rockyou):
 
 # Função para carregar a lista de senhas populares (rockyou.txt)
 def carregar_rockyou(arquivo_rockyou):
-    """
-    Carrega as senhas do arquivo rockyou.txt para uma lista.
-    """
-    with open(arquivo_rockyou, 'r', encoding='latin-1') as file:
-        return {linha.strip() for linha in file}
+    try:
+        with open(arquivo_rockyou ,'r', encoding = 'utf-8', errors='ignore') as file:
+            return {linha.strip() for linha in file}
+    except FileNotFoundError:
+        return set
 
 # Função para ler o arquivo de senhas e analisar cada senha
 def analisar_senhas(arquivo_senhas, lista_rockyou):
@@ -101,36 +93,15 @@ def analisar_senhas(arquivo_senhas, lista_rockyou):
     analise = []
     for senha in senhas:
         esta_na_rockyou = verificar_rockyou(senha, lista_rockyou)
-        forca = avaliar_forca_senha(senha)
-        entropia = calcular_entropia(senha)
-        analise.append({'senha': senha, 'forca': forca, 'entropia': entropia, 'rockyou': esta_na_rockyou})
+        dados_zxcvbn = analisar_senha_zxcvbn(senha)
 
+        analise.append({
+            'senha': senha, 
+            'forca': dados_zxcvbn['score'], # Agora é numérico (0-4)
+            'tempo': dados_zxcvbn['crack_time'],
+            'rockyou': esta_na_rockyou
+        })
     return analise
-
-# Função para gerar um sumário das senhas analisadas e exibir em tabelas
-def gerar_sumario(analise):
-    """
-    Gera um sumário das senhas analisadas, incluindo detalhes como senhas mais curtas,
-    mais longas, mais fortes, e senhas repetidas.
-    """
-    total_senhas = len(analise)
-    senhas_repetidas = [item for item, count in Counter([a['senha'] for a in analise]).items() if count > 1]
-    senha_mais_curta = min(analise, key=lambda x: len(x['senha']))
-    senha_mais_longa = max(analise, key=lambda x: len(x['senha']))
-    entropia_media = sum(a['entropia'] for a in analise) / total_senhas
-
-    # Tabelas de resumo
-    tabela_resumo = [
-        ["Total de Senhas", total_senhas],
-        ["Entropia Média das Senhas", f"{entropia_media:.2f}"]
-    ]
-
-    tabela_detalhes = [
-        ["Senha Mais Curta", senha_mais_curta['senha'], len(senha_mais_curta['senha'])],
-        ["Senha Mais Longa", senha_mais_longa['senha'], len(senha_mais_longa['senha'])],
-        ["Senha Menos Forte", min(analise, key=lambda x: x['entropia'])['senha']],
-        ["Senha Mais Forte", max(analise, key=lambda x: x['entropia'])['senha']]
-    ]
 # Função para gerar um sumário das senhas analisadas e exibir em tabelas
 def gerar_sumario(analise):
     """
@@ -165,9 +136,16 @@ def gerar_sumario(analise):
     print(tabulate(tabela_detalhes, headers=["Descrição", "Senha", "Comprimento"], tablefmt="grid"))
 
     # Exibir tabela de senhas analisadas
-    tabela_senhas = [[a['senha'], a['forca'], f"{a['entropia']:.2f}", "Sim" if a['rockyou'] else "Não"] for a in analise]
+    tabela_senhas = [
+        [
+            "*" * len(a['senha']), # Oculta a senha visualmente
+            a['forca'], 
+            a['tempo'], 
+            "Sim" if a['rockyou'] else "Não"
+        ] for a in analise
+    ]
     print(Fore.CYAN + "\nDetalhes das Senhas Analisadas:")
-    print(tabulate(tabela_senhas, headers=["Senha", "Força", "Entropia", "Está no RockYou?"], tablefmt="grid", colalign=("center", "center")))
+    print(tabulate(tabela_senhas, headers=["Senha (Oculta)", "Score (0-4)", "Tempo Quebra", "RockYou"], tablefmt="grid"))
 
     # Exibir tabela de senhas repetidas
     if senhas_repetidas:
