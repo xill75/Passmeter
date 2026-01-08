@@ -1,24 +1,51 @@
-# Passmeter
-
 # Avaliador de Força de Senhas (PassMeter)
 
-Este projeto é um avaliador de força de senhas baseado em padrões de segurança de 2024. Ele analisa um arquivo de senhas, verifica a presença das senhas em uma lista de senhas populares (como o arquivo `rockyou.txt`) e avalia a força e a entropia de cada senha.
+Ferramenta de auditoria de senhas que utiliza a biblioteca `zxcvbn` para análise heurística, estimativa de tempo de quebra e feedback de segurança. Suporta verificação contra wordlists populares.
 
 ## Funcionalidades
 
-- **Análise de Senhas**: Avalia cada senha com base em critérios de força, como comprimento e diversidade de caracteres (minúsculas, maiúsculas, números, caracteres especiais).
-- **Verificação no RockYou**: Verifica se a senha está presente na lista de senhas populares.
-- **Cálculo de Entropia**: Calcula a entropia da senha para avaliar seu nível de complexidade.
-- **Exibição de Relatórios**: Exibe as senhas analisadas em uma tabela, incluindo a força, entropia e se a senha está no arquivo `rockyou.txt`. Também fornece um resumo geral das senhas.
+- **Análise Heurística (zxcvbn)**: Classificação de força (Score 0-4) e estimativa de tempo para quebra offline.
+- **Feedback de Segurança**: Sugestões e avisos sobre vulnerabilidades específicas encontradas na senha.
+- **Verificação em Wordlist**: Checagem opcional em listas como `rockyou.txt`.
+- **OpSec (Privacidade)**: As senhas são exibidas mascaradas (`******`) no terminal por padrão.
+- **Exportação de Dados**: Gera relatórios detalhados em formato CSV.
 
-## Exemplo de uso 
+## Instalação
 
-python passmeter.py senhas.txt rockyou.txt
-
-### Requisitos
-
-Antes de rodar o script, instale as dependências do projeto com o seguinte comando:
+Instale as dependências necessárias:
 
 ```bash
 pip install -r requirements.txt
+
+Uso
+Análise Básica
+
+Executa apenas a análise heurística do zxcvbn:
+
+```bash
+python passmeter.py senhas.txt
+
+Com Wordlist e Exportação CSV
+
+Verifica contra o RockYou e salva o resultado em arquivo:
+```bash
+
+python passmeter.py senhas.txt --rockyou rockyou.txt --csv relatorio.csv
+
+Exibir Senhas 
+
+Força a exibição das senhas em texto claro no terminal (use com cautela):
+```bash
+
+python passmeter.py senhas.txt --show
+
+Argumentos
+
+    arquivo_senhas: Caminho do arquivo contendo as senhas (uma por linha).
+
+    --rockyou [ARQUIVO]: (Opcional) Caminho para a wordlist de senhas vazadas.
+
+    --csv [ARQUIVO]: (Opcional) Caminho para salvar a saída em formato CSV.
+
+    --show: (Opcional) Desativa o mascaramento de senhas no terminal.
 
