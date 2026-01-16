@@ -1,10 +1,9 @@
 import argparse
-import csv
-import textwrap
-from tabulate import tabulate
+import re
 from collections import Counter
 from colorama import Fore, Style, init
-from zxcvbn import zxcvbn
+from tabulate import tabulate
+import math
 
 # Inicializar Colorama
 init(autoreset=True)
@@ -19,61 +18,97 @@ def exibir_banner():
 """
     print(Fore.CYAN + banner)
 
-def analisar_senha_zxcvbn(senha, user_inputs=[]):
+# Função para calcular a entropia de uma senha
+def calcular_entropia(senha):
     """
-    Analisa a senha usando zxcvbn e retorna score, tempo e feedback.
+    Calcula a entropia da senha para avaliar sua complexidade.
+    A entropia é baseada no comprimento e na diversidade de caracteres da senha.
     """
-    resultado = zxcvbn(senha, user_inputs=user_inputs)
-    
-    # Tratamento correto do feedback
-    warning = resultado['feedback']['warning']
-    suggestions = resultado['feedback']['suggestions']
-    
-    feedback_lista = [warning] if warning else []
-    feedback_lista.extend(suggestions)
-    
-    return {
-        'score': resultado['score'], # 0 a 4
-        'crack_time': resultado['crack_times_display']['offline_slow_hashing_1e4_per_second'],
-        'feedback': ", ".join(feedback_lista)
-    }
+    if len(senha) == 0:
+        return 0
+    pool = 0
+    if re.search(r'[a-z]', senha):
+        pool += 26  # Letras minúsculas
+    if re.search(r'[A-Z]', senha):
+        pool += 26  # Letras maiúsculas
+    if re.search(r'[0-9]', senha):
+        pool += 10  # Dígitos numéricos
+    if re.search(r'[!@#$%^&*()_+\-=[\]{};\\:\"|,.<>\/?]', senha):
+        pool += 32  # Caracteres especiais
+    return len(senha) * math.log2(pool) if pool > 0 else 0
 
-def carregar_rockyou(arquivo_rockyou):
-    if not arquivo_rockyou:
-        return set()
-    try:
-        with open(arquivo_rockyou, 'r', encoding='utf-8', errors='ignore') as file:
-            return {linha.strip() for linha in file}
-    except FileNotFoundError:
-        print(Fore.RED + f"[!] Arquivo '{arquivo_rockyou}' não encontrado. Continuando sem wordlist.")
-        return set()
+# Função para avaliar a força da senha
+def avaliar_forca_senha(senha):
+    """
+    Avalia a força da senha com base no tamanho e na diversidade de caracteres.
+    """
+    tamanho = len(senha)
+    tipos_caracteres = 0
 
+    # Verifica a presença de diferentes tipos de caracteres
+    if re.search(r'[a-z]', senha):
+        tipos_caracteres += 1
+    if re.search(r'[A-Z]', senha):
+        tipos_caracteres += 1
+    if re.search(r'[0-9]', senha):
+        tipos_caracteres += 1
+    if re.search(r'[!@#$%^&*()_+\-=[\]{};\\:\"|,.<>\/?]', senha):
+        tipos_caracteres += 1
+
+    # Avalia a senha com base em seu comprimento e diversidade de caracteres
+    if tamanho <= 6 or tipos_caracteres == 1:
+        return "Muito Fraca"
+    elif 7 <= tamanho <= 10 and tipos_caracteres >= 2:
+        return "Fraca"
+    elif 11 <= tamanho <= 16 and tipos_caracteres >= 2:
+        return "Média"
+    elif 17 <= tamanho <= 20 and tipos_caracteres >= 3:
+        return "Forte"
+    elif tamanho >= 21 and tipos_caracteres == 4:
+        return "Muito Forte"
+    else:
+        return "Indeterminada"
+
+# Função para verificar se a senha está na lista "rockyou"
 def verificar_rockyou(senha, lista_rockyou):
     return senha in lista_rockyou
 
+# Função para carregar a lista de senhas populares (rockyou.txt)
+def carregar_rockyou(arquivo_rockyou):
+    """
+    Carrega as senhas do arquivo rockyou.txt para uma lista.
+    """
+    with open(arquivo_rockyou, 'r', encoding='latin-1') as file:
+        return {linha.strip() for linha in file}
+
+# Função para ler o arquivo de senhas e analisar cada senha
 def analisar_senhas(arquivo_senhas, lista_rockyou):
+    """
+    Lê o arquivo de senhas e avalia cada senha.
+    Para cada senha, calcula sua força, entropia e verifica se está na lista de senhas populares.
+    """
+    senhas = []
+    with open(arquivo_senhas, 'r', encoding='latin-1') as file:
+        for linha in file:
+            senha = linha.strip()
+            if senha:  # Verifica se a linha não está vazia
+                senhas.append(senha)
+
     analise = []
-    try:
-        with open(arquivo_senhas, 'r', encoding='utf-8', errors='ignore') as file:
-            for linha in file:
-                senha = linha.strip()
-                if senha:
-                    dados_zxcvbn = analisar_senha_zxcvbn(senha)
-                    esta_na_rockyou = verificar_rockyou(senha, lista_rockyou)
-                    
-                    analise.append({
-                        'senha': senha,
-                        'forca': dados_zxcvbn['score'],
-                        'tempo': dados_zxcvbn['crack_time'],
-                        'feedback': dados_zxcvbn['feedback'],
-                        'rockyou': esta_na_rockyou
-                    })
-    except FileNotFoundError:
-        print(Fore.RED + f"[!] Arquivo de senhas '{arquivo_senhas}' não encontrado.")
-        return []
+    for senha in senhas:
+        esta_na_rockyou = verificar_rockyou(senha, lista_rockyou)
+        forca = avaliar_forca_senha(senha)
+        entropia = calcular_entropia(senha)
+        analise.append({'senha': senha, 'forca': forca, 'entropia': entropia, 'rockyou': esta_na_rockyou})
+
     return analise
 
-def gerar_sumario(analise, mostrar_senhas=False):
+# Função para gerar um sumário das senhas analisadas e exibir em tabelas
+def gerar_sumario(analise):
+    """
+    Gera um sumário das senhas analisadas, incluindo detalhes como senhas mais curtas,
+    mais longas, mais fortes, e senhas repetidas.
+    """
     total_senhas = len(analise)
     if total_senhas == 0:
         return
@@ -98,57 +133,48 @@ def gerar_sumario(analise, mostrar_senhas=False):
         ["Maior Score", max(analise, key=lambda x: x['forca'])['forca'], "-"]
     ]
 
-    print(Fore.CYAN + "\nResumo das Senhas:")
-    print(tabulate(tabela_resumo, headers=["Descrição", "Valor"], tablefmt="grid"))
+    # Exibir tabelas
+    print(Fore.CYAN + "\nResumo da Análise de Senhas:")
+    print(tabulate(tabela_resumo, headers=["Descrição", "Valor"], tablefmt="grid", colalign=("center", "center")))
+    print(tabulate(tabela_detalhes, headers=["Descrição", "Senha", "Tamanho"], tablefmt="grid", colalign=("center", "center")))
 
-    print(Fore.CYAN + "\nEstatísticas:")
-    print(tabulate(tabela_detalhes, headers=["Descrição", "Senha/Valor", "Comp/Info"], tablefmt="grid"))
-
-    tabela_senhas = []
-    for a in analise:
-        # Corrige o layout quebrando o texto em linhas de 40 caracteres
-        feedback_formatado = textwrap.fill(a['feedback'], width=40)
-        
-        tabela_senhas.append([
-            mask(a['senha']), 
-            a['forca'], 
-            a['tempo'], 
-            "Sim" if a['rockyou'] else "Não",
-            feedback_formatado
-        ])
-    
-    print(Fore.CYAN + "\nAnálise Detalhada:")
-    print(tabulate(tabela_senhas, headers=["Senha", "Score", "Tempo Quebra", "RockYou", "Feedback"], tablefmt="grid"))
+    # Exibir tabela de senhas analisadas
+    print(Fore.CYAN + "\nDetalhes das Senhas:")
+    tabela_senhas = [[a['senha'], a['forca'], f"{a['entropia']:.2f}", "Sim" if a['rockyou'] else "Não"] for a in analise]
+    print(tabulate(tabela_senhas, headers=["Senha", "Força", "Entropia", "Está no RockYou?"], tablefmt="grid", colalign=("center", "center")))
 
     if senhas_repetidas:
-        print(Fore.YELLOW + f"\n[!] Encontradas {len(senhas_repetidas)} senhas repetidas.")
+        print(Fore.YELLOW + "\nSenhas Repetidas:")
+        tabela_repetidas = [[senha] for senha in senhas_repetidas]
+        print(tabulate(tabela_repetidas, headers=[Fore.YELLOW + "Senha"], tablefmt="grid"))
+    else:
+        print(Fore.GREEN + "\nNenhuma senha repetida encontrada.")
 
+# Função principal para lidar com argumentos e executar o script
 def main():
-    parser = argparse.ArgumentParser(description="Analisador de Senhas (zxcvbn + wordlist)")
-    parser.add_argument("arquivo_senhas", help="Arquivo contendo as senhas a serem analisadas")
-    parser.add_argument("--rockyou", help="Caminho para wordlist (opcional)", default=None)
-    parser.add_argument("--show", action="store_true", help="Exibe as senhas em texto claro (Cuidado!)")
-    parser.add_argument("--csv", help="Salvar relatório em CSV", metavar="FILE")
+    """
+    Função principal que lida com os argumentos passados ao script e executa as análises
+    de senhas e gera os relatórios.
+    """
+    parser = argparse.ArgumentParser(
+        description='Avaliador de força de senhas baseado em padrões de segurança de 2024.'
+    )
+    parser.add_argument('arquivo_senhas', help='Arquivo contendo uma senha por linha')
+    parser.add_argument('arquivo_senhas_populares', help='Arquivo contendo a lista de senhas populares (rockyou.txt)')
     
     args = parser.parse_args()
 
-    lista_rockyou = carregar_rockyou(args.rockyou)
+    # Exibir Banner
+    exibir_banner()
 
-    print(Fore.YELLOW + "[*] Analisando senhas...")
+    # Carregar a lista de senhas populares
+    lista_rockyou = carregar_rockyou(args.arquivo_senhas_populares)
+
+    # Analisar as senhas do arquivo
     analise = analisar_senhas(args.arquivo_senhas, lista_rockyou)
 
-    gerar_sumario(analise, mostrar_senhas=args.show)
-
-    if args.csv and analise:
-        try:
-            with open(args.csv, 'w', newline='', encoding='utf-8') as f:
-                campos = ['senha', 'forca', 'tempo', 'feedback', 'rockyou']
-                writer = csv.DictWriter(f, fieldnames=campos)
-                writer.writeheader()
-                writer.writerows(analise)
-            print(Fore.GREEN + f"\n[+] Relatório CSV salvo em: {args.csv}")
-        except Exception as e:
-            print(Fore.RED + f"\n[!] Erro ao salvar CSV: {e}")
+    # Gerar e imprimir o sumário das análises
+    gerar_sumario(analise)
 
 if __name__ == "__main__":
     exibir_banner()
